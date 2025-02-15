@@ -1,40 +1,3 @@
-
-## What's different? <br>
-This is suited to cartesian bedslingers. This was originally designed for Euclid and Klippy type sensors and CoreXY's, and then adapted to be used with a bltouch. But I'm on an Ender 3 and I can't move the toolhead in Y. So I've designed an adapter to relocate the Z endstop and turn it into a pin endstop. And troubleshooting some of the differences.
-
-  ## New Requirements:
-  1) Physical Z-Endstop mounted as a pin - it is our reference point and is always Z 0.0 for calculations.
-  2) BLTouch as probe - the sensor to check the distance between endstop and bed to calc the offset
-  3) Accurate X and Y probe offsets
-  
-  ## Notes:
-   Your BLTouch and Nozzle should have litte to no offset in the Y position. We won't be able to move Y to find the Z-Endpin on a Bedslinger
-    unless you mount the switch to the bed. But that requires cable management and addressing bed heat. Possible, Better, But not free!
-   The bigger the offset, the bigger the pin has to be. Your Nozzle and BLTouch have to both be able to touch the pin off of the bed so
-   
-   ## Installation:
-
-      Login to your pi by ssh. Clone the repo to your homefolder with this command:
-
-        
-        git clone https://github.com/skyshadex/auto_z_offset.git
-        cd ~/auto_z_offset
-        ./install.sh
-        
-
-For further updates you can add it to moonraker's updated manager:
-
-<pre><code>
-[update_manager auto_offset_z]
-type: git_repo
-path: ~/auto_z_offset
-origin: https://github.com/skyshadex/auto_z_offset.git
-install_script: install.sh
-</code></pre>
-
-    
-
-## Original:<br>
 ## This is a Klipper plugin for an auto calibration Z offset with a BLTouch (or possible inductive probe - check hints first!)
 
 ## Why:<br>
@@ -62,11 +25,12 @@ config section of the plugin.
 
                                                     | |
                                       Nozzle        | |  BLTouch
-                                      |_   _|        -
-                                        \_/               
+                                      |_   _|        -___________________
+                                        \_/______________________________| Z-Offset BLTouch
 
-Bed                                      _ 
---------------------------------------- | | Endstop Pin
+Bed                                      __________________________________________ 
+_______________________________________ | | Endstop Pin ___________________________| Endstop-Bed Offset
+                                      __| |__
 </code></pre>
 
 ## Configuration for klipper:
@@ -78,7 +42,8 @@ endstop_xy_position:233.5,358   # Physical endstop nozzle over pin
 speed: 100                      # X/Y travel speed between the two points
 z_hop: 10                       # Lift nozzle to this value after probing and for move
 z_hop_speed: 20                 # Hop speed of probe
-ignore_alignment: False         # Optional - this allows ignoring the presence of z-tilt or quad gantry leveling config section
+ignore_alignment: False         # Optional - by default False - this allows ignoring the presence of z-tilt or quad gantry leveling config section
+ignore_internaloffset: False    # Optional - by default False - this allows ignoring the fixed internal offset of 0.5mm if no microswitch is used while using other methods
 offset_min: -1                  # Optional - by default -1 is used - used as failsave to raise an error if offset is lower than this value
 offset_max: 1                   # Optional - by default 1 is used - used as failsave to raise an error if offset is higher than this value
 endstop_min: 0                  # Optional - by default disabled (0) - used as failsave to raise an error if endstop is lower than this value
@@ -86,12 +51,43 @@ endstop_max: 0                  # Optional - by default disabled (0) - used as f
 offsetadjust: 0.0               # Manual offset correction option - start with zero and optimize during print with babysteps
                                   1) If you need to lower the nozzle from -0.71 to -0.92 for example your value is -0.21.
                                   2) If you need to move more away from bed add a positive value.
+                                  3) With version 0.0.5 of this plugin you can optinal use a parameter for example: AUTO_OFFSET_Z OFFSETADJUST=0.1 - this way the value
+                                     from config section is ignored.
+
+</code></pre>
+## Installation:
+
+Login to your pi by ssh. Clone the repo to your homefolder with this command:
+
+<pre><code>
+git clone https://github.com/hawkeyexp/auto_offset_z.git<br>
+cd ~/auto_offset_z<br>
+./install.sh<br>
+</code></pre>
+
+For further updates you can add it to moonraker's updated manager:
+
+<pre><code>
+[update_manager auto_offset_z]
+type: git_repo
+path: ~/auto_offset_z
+origin: https://github.com/hawkeyexp/auto_offset_z.git
+install_script: install.sh
 </code></pre>
 
 ## Hints for use with an inductive probe:
 
 in general an inductive probe should also work this way if it is able to detect the endstop pin but it is not tested and you have to
 ensure the probe is really detecting the endstop pin and not the bed surface which is possible really close to the pin.
+
+## sample code:
+<code>AUTO_OFFSET_Z</code>
+This will use configured params from config section only - ensure your params are valid also in probe section
+
+<code>AUTO_OFFSET_Z OFFSEADJUST=0.1</code>
+This will ignore the offsetadjust value from config section and use the paramameter value given - this is helpfull for materials which needs a mire tight nozzle
+or a mor far nozzle to print correcntly - you can handle what is needed in your macros during print and for example detect material type by filenames of the printjob (cura)
+or additional gcode params for material in superslicer etc.
 
 ## Last words:
 
